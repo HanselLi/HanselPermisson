@@ -1,5 +1,6 @@
 package com.example.liyangos3323.hanselpermisson.permission;
 
+import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -24,6 +25,10 @@ public class PermissonManager2 {
 
     private PermissonManager2() {
 
+    }
+
+    public boolean isPermissionDenied() {
+        return !isGrantedPermission(Manifest.permission.ACCESS_FINE_LOCATION) || !isGrantedPermission(Manifest.permission.CAMERA);
     }
     public boolean isGrantedPermission(String permission){
         if (checkPermisson(MApp.mApp,permission) == PackageManager.PERMISSION_GRANTED){

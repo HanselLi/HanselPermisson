@@ -4,12 +4,12 @@ import android.Manifest;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
@@ -17,12 +17,10 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.example.liyangos3323.hanselpermisson.permission.PermissonManager2;
-import com.example.liyangos3323.hanselpermisson.permission.SPManager;
 import com.example.liyangos3323.hanselpermisson.permission.SPSetting;
 
 import java.util.ArrayList;
@@ -31,19 +29,22 @@ import java.util.List;
 public class DeclaredPermissionActivity extends AppCompatActivity {
 
     private static Boolean sIsMiOS = null;
-/**
- *主要逻辑：先弹出一个dialog让用户同意，之后检查权限。
- * 核心是shouldShowRequestPermissionRationale，见方法注释
- *
- *
- *
- **/
+
+    /**
+     * 主要逻辑：先弹出一个dialog让用户同意，之后检查权限。
+     * 核心是shouldShowRequestPermissionRationale，见方法注释
+     *
+     * @onCreate 需要注意检查用户是否设置中关闭了权限
+     **/
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_declared_permisson);
+        Log.e("tag", "user close ? " + PermissonManager2.getInstance().isPermissionDenied());
         if (!SPSetting.getInstance().getAllPermissionGranted(this)) {
             showAuthAndCheckPermission();
+        } else if (PermissonManager2.getInstance().isPermissionDenied()) {
+            checkMPermission();
         }
     }
 
@@ -124,31 +125,32 @@ public class DeclaredPermissionActivity extends AppCompatActivity {
         boolean isExitApp = false;     // 是否退出浏览器
         boolean isGoSettings = false;   // 是否去系统设置APP权限界面
         if (requestCode == 100) {
-            if (isMIOS()&&mPermissionArray.size()>permissions.length){
+            if (isMIOS() && mPermissionArray.size() > permissions.length) {
                 permissions = mPermissionArray.toArray(new String[mPermissionArray.size()]);
             }// deal with MI permission
             //小米特殊，如果申请的权限5个，可能返回2个，所以判断一下，少于申请的个数话就重赋值
             for (int i = 0; i < permissions.length; i++) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED){
+                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     boolean b = showRationalUI(permissions[i]);
-                    Log.e("tag","shouldShow -->"+b);
-                    if (!b){
+                    Log.e("tag", "shouldShow -->" + b);
+                    if (!b) {
                         isGoSettings = true;
                     }
-                    isExitApp =true;
+                    isExitApp = true;
                 }
             }
-            if (isGoSettings){
+            if (isGoSettings) {
                 goToAppSetting();
-            }else if (!isExitApp){
-                SPSetting.getInstance().setAllPermissionGranted(this,true);
-                startActivity(new Intent(DeclaredPermissionActivity.this,MainActivity.class));
-            }else {
-                SPSetting.getInstance().setAllPermissionGranted(this,false);
+            } else if (!isExitApp) {
+                SPSetting.getInstance().setAllPermissionGranted(this, true);
+                startActivity(new Intent(DeclaredPermissionActivity.this, MainActivity.class));
+                finish();
+            } else {
+                SPSetting.getInstance().setAllPermissionGranted(this, false);
                 exitApp();
             }
-        }else {
-            super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        } else {
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         }
     }
 
@@ -160,22 +162,23 @@ public class DeclaredPermissionActivity extends AppCompatActivity {
      * 4).设备的系统设置中，禁止了应用获取这个权限的授权，则调用shouldShowRequestPermissionRationale()，返回false。
      */
     private boolean showRationalUI(String permission) {
-        boolean b = ActivityCompat.shouldShowRequestPermissionRationale(this,permission);
+        boolean b = ActivityCompat.shouldShowRequestPermissionRationale(this, permission);
         return b;
     }
+
     private void goToAppSetting() {
         Intent intent = new Intent();
         intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         Uri uri = Uri.fromParts("package", getPackageName(), null);
         intent.setData(uri);
 
-        startActivityForResult(intent , 2);
+        startActivityForResult(intent, 2);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == 2){
+        if (requestCode == 2) {
             checkMPermission();
         }
     }
